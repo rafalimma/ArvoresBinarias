@@ -5,15 +5,15 @@ void fakeBin(const char *digits, char *binary) {
   // character.
   int i;
   int size;
-  for(i = 0; &digits != '\0';i++) {
+  for(i = 0; digits != '\0';i++) {
     size = i + 1;
   }
-  for(i = 0; digits > size - 1 ;i++) {
+  while(i = 0; digits > size - 1 ;i++) {
     if (digits[i] < 5) {
-      &binary[i] = '0';
+      binary[i] = '0';
     }else{
-      &binary[i] = '1'
+      binary[i] = '1'
     }
   }
- 	*binary = '\0';
+ 	binary[i] = '\0';
 }
