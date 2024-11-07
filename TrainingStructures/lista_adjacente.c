@@ -21,11 +21,36 @@ typedef struct Graph {
 // função para criar o grafo que tem -> n total de amigos e
 // array de listas de amigo para cada amigo
 
-graph* createGraph(int amigoss) {
-    graph* g = (graph*)malloc(sizeof(graph));
+graph* initGraph(int amigoss) {
+    graph* g = (graph*)malloc(sizeof(graph)); // aqui eu to alocando a estrutura inteira
     g->amigoss = amigoss; // aqui será um vertice
 
-    g->adjacentes = (node*)malloc(sizeof(node));
-    // for no adjacentes pra inicializar cada posição
+    for (int i=0; i<amigoss; i++) {
+        printf("pondo pa nulo\n");
+        g->adjacentes[i]->proximoamigo = NULL; // armazena todos os amigos da pessoa i
+    }
+    return g;
+}
 
+graph* insertGraph(graph* grafoo_amigos, int amigo, int amigoss) {
+    if (amigoss > MAX) {
+        return  NULL;
+    } else {
+        for (int i=0; i<amigoss; i++) {
+            if (i == amigo) {
+                grafoo_amigos->adjacentes[i]->proximoamigo->amigo = amigo; // aqui eu estou criando uma conexão
+                return grafoo_amigos;
+            }
+        }
+    }
+
+}
+
+int main() {
+    graph* grafoo_amigos = initGraph(10);
+    for (int i=0;i<grafoo_amigos->amigoss;i++) {
+        printf("Amigo:", i, grafoo_amigos->adjacentes[i]->proximoamigo);
+    }
+    free(grafoo_amigos);
+    return 0;
 }
