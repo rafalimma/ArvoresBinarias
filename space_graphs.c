@@ -50,10 +50,10 @@ graph* AdicionaConexao(graph* grafo, int origem, char* destino, int peso) {
 }
 
 void abrirCSV(const char* arquivo, graph* grafo) {
-    FILE* arquivo = fopen("estacoeserotas.csv", "r");
+    FILE* fp = fopen(arquivo, "r");
     char linha[256];
     // fgets lê cada linha do CSV
-    while (fgets(linha, sizeof(linha), arquivo)) {
+    while (fgets(linha, sizeof(linha), fp)) {
         // desconsidera nova linha
         linha[strcspn(linha, "\n")] = '\0';
         // strtok divide os dados por linha
@@ -72,6 +72,7 @@ void abrirCSV(const char* arquivo, graph* grafo) {
             printf("Erro ao abrir o arquivo\n");
         }
     }
+    fclose(fp);
 }
 
 
