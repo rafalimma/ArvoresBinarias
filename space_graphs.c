@@ -1,8 +1,3 @@
-//
-// Created by rafae on 15/11/2024.
-//
-
-#include "space_graphs.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -14,10 +9,10 @@
 // 3. em caso de falahas encontrar alterantivas entre as rotas
 
 typedef struct Node {
-    char *nome[40]; // nome da estação
+    char nome[40]; // nome da estação
     // int indentificador;
     int peso;
-    struct node *proxima; // aponta para a próxima estação ligada
+    struct Node *proxima; // aponta para a próxima estação ligada
 } node;
 
 typedef struct Graph {
@@ -31,7 +26,6 @@ graph* InitGraph(int total_estacoes) {
 
     for (int i=0; i<MAX; i++) {
         space_graph->adjacentes[i] = NULL;
-        space_graph->adjacentes[i]->peso = 0;
     }
     return space_graph;
 }
@@ -42,8 +36,9 @@ graph* AdicionaConexao(graph* grafo, int origem, char* destino, int peso) {
         printf("Erro ao alocar memória\n");
         return grafo; // Retorna o grafo inalterado em caso de erro
     }
-    strcpy(novonode->nome[origem], destino);
+    strcpy(novonode->nome, destino);
     novonode->peso = peso;
+    novonode->proxima = grafo->adjacentes[origem];
     grafo->adjacentes[origem] = novonode;
 
     return grafo;
@@ -51,6 +46,10 @@ graph* AdicionaConexao(graph* grafo, int origem, char* destino, int peso) {
 
 void abrirCSV(const char* arquivo, graph* grafo) {
     FILE* fp = fopen(arquivo, "r");
+    if (!fp) {
+        printf("Erro ao abrir o arquivo: %s\n", arquivo);
+        return;
+    }
     char linha[256];
     // fgets lê cada linha do CSV
     while (fgets(linha, sizeof(linha), fp)) {
@@ -78,7 +77,7 @@ void abrirCSV(const char* arquivo, graph* grafo) {
 
 int main () {
     graph* grafo = InitGraph(MAX);
-    abrirCSV("estacoeserotas.csv", grafo);
+    abrirCSV("C:/SpaceGraphs/estacoeserotas.csv", grafo);
     for (int i=0; i<MAX; i++) {
         node* atual =  grafo->adjacentes[i];
         printf("Estacao %d:\n", i);
