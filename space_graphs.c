@@ -5,12 +5,21 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <limits.h>
 #define MAX 100 // número máximo de vertices estações
+#define INF INT_MAX
 
 // INSTRUÇÕES
 // 1. implementar a estrutura de grafos para implementar a rede de estações
 // 2. encontrar o caminho mais curto usando um algoritmo específico
 // 3. em caso de falahas encontrar alterantivas entre as rotas
+
+// rotas bloqueadas:
+// Elysium - Idris;
+// Idris - Rethor;
+// Rethor - Croshaw;
+// Croshaw - Nul;
+
 
 // para salvar os nomes das estações
 char estacoes[MAX][40];// vetor char
@@ -27,6 +36,12 @@ typedef struct Graph {
     int estacoes; // número total de estações
     node* adjacentes[MAX];
 } graph;
+
+typedef struct {
+    int vertice;
+    int distancia;
+} heapNode;
+
 
 int busca_adicionaestacao(const char* nome) {
     // copia o nome da estação para dentro da lista de vetores
@@ -76,6 +91,11 @@ graph* AdicionaConexao(graph* grafo, char* origem, char* destino, int peso) {
 
     return grafo;
 }
+// função que adiciona as estações dos dois lados da conexão
+//void AdicionaConexaoBidirecional(graph* grafo, const char* origem, const char* destino, int peso) {
+    //AdicionaConexao(grafo, origem, destino, peso);
+    //AdicionaConexao(grafo, destino, origem, peso); // Adiciona a conexão na direção oposta
+//}
 
 void abrirCSV(const char* arquivo, graph* grafo) {
     FILE* fp = fopen(arquivo, "r");
@@ -90,21 +110,19 @@ void abrirCSV(const char* arquivo, graph* grafo) {
         linha[strcspn(linha, "\n")] = '\0';
         // strtok divide os dados por linha
         char* origem = strtok(linha, ",");
-        char* destino = strtok(NULL, ",");
-        char* peso_str = strtok(NULL, ",");
+        char* destino;
+        char* peso_str;
 
-        if (origem && destino && peso_str) {
-            // converte peso str em numero
-            // ASCII to integer
-            int peso = atoi(peso_str);
-            // cria um índice para a origem (usando a primeira letra dela)
+        while ((destino = strtok(NULL, ",")) && (peso_str = strtok(NULL, ","))) {
+            int peso = atoi(peso_str); // Converte o peso para inteiro
             AdicionaConexao(grafo, origem, destino, peso);
-        } else {
-            printf("Erro ao abrir o arquivo\n");
         }
     }
     fclose(fp);
 }
+// ant ordem que precisa ser visitada
+// dist distancia do veritice inicial até odestino
+// ambos com mesmo tamnaho de numero de vertices do grafo
 
 
 int main () {
@@ -113,8 +131,8 @@ int main () {
     // itera por todas as estações
     for (int i=0; i<toralEstacoes; i++) {
         //cada indice i contem a lista encadeada de conexões para a estação i
-        printf("Estacao %s:\n", estacoes[i]);
         node* atual =  grafo->adjacentes[i];
+        printf("Estacao:%s\n", estacoes[i]);
         while (atual != NULL) {
             // percorre a lista de conexões da estação i
             printf("  -> %s (peso: %d)\n", atual->nome, atual->peso);
