@@ -120,10 +120,31 @@ void abrirCSV(const char* arquivo, graph* grafo) {
     }
     fclose(fp);
 }
+
+int procuraMenorDistancia(float *dist, int *visitado, int NV) {
+
+}
 // ant ordem que precisa ser visitada
 // dist distancia do veritice inicial até odestino
 // ambos com mesmo tamnaho de numero de vertices do grafo
-
+void MenorCaminhoGrafo(graph grafo*, int ini, int *ant, float *dist) {
+    int i, cont, NV, ind, *visitado, u;
+    cont = NV = grafo->estacoes;
+    visitado = (int*)malloc(NV * sizeof(int));
+    for (i = 0; i < NV; i++) {
+        // inicializando distancias anteriores
+        ant[i] = -1;
+        dist[i] = -1;
+        visitado[i] = 0;
+    }
+    while(cont > 0) {
+        u = procuraMenorDistancia(dist, visitado, NV);
+        if (u == -1) {
+            break;
+            //...........
+        }
+    }
+}
 
 int main () {
     graph* grafo = InitGraph(MAX);
