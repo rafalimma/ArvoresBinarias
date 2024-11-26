@@ -37,15 +37,10 @@ typedef struct Graph {
     node* adjacentes[MAX];
 } graph;
 
-typedef struct {
-    int vertice;
-    int distancia;
-} heapNode;
-
-
 int busca_adicionaestacao(const char* nome) {
     // copia o nome da estação para dentro da lista de vetores
     for (int i = 0;i < toralEstacoes; i++) {
+        // busca a estação pelo nome
         if (strcmp(estacoes[i], nome) == 0) {
             return i;
         }
@@ -54,8 +49,10 @@ int busca_adicionaestacao(const char* nome) {
         strcpy(estacoes[toralEstacoes], nome);
         return toralEstacoes++;
     }
-    printf("Erro: número máximo de estações atingido!\n");
-    return -1; // Indica falha
+    if (toralEstacoes >= MAX) {
+        printf("Erro: número máximo de estações atingido!\n");
+        return -1; // Indica falha
+    }
 }
 
 graph* InitGraph(int total_estacoes) {
@@ -67,6 +64,21 @@ graph* InitGraph(int total_estacoes) {
         space_graph->adjacentes[i] = NULL;
     }
     return space_graph;
+}
+int rotaBloqueada(const char* origem, const char* destino) {
+    const char* rotas_bloqueadas[][2] = {
+        {"Elysium", "Idris"},
+        {"Idris", "Rethor"},
+        {"Rethor", "Croshaw"},
+        {"Croshaw", "Nul"}
+    };
+    for (int i = 0; i < 4; i++) {
+        if ((strcmp(origem, rotas_bloqueadas[i][0]) == 0 && strcmp(destino, rotas_bloqueadas[i][1]) == 0) ||
+            (strcmp(origem, rotas_bloqueadas[i][1]) == 0 && strcmp(destino, rotas_bloqueadas[i][0]) == 0)) {
+            return 1; // Rota bloqueada
+            }
+    }
+    return 0;
 }
 
 graph* AdicionaConexao(graph* grafo, char* origem, char* destino, int peso) {
@@ -83,6 +95,10 @@ graph* AdicionaConexao(graph* grafo, char* origem, char* destino, int peso) {
         printf("Erro ao alocar memória\n");
         return grafo; // Retorna o grafo inalterado em caso de erro
     }
+    if (rotaBloqueada(origem, destino)) {
+        printf("Rota bloqueada: %s -> %s\n", origem, destino);
+        return grafo;
+    }
     //Essa abordagem insere nós no início da lista, o que é eficiente (complexidade O(1))
     strcpy(novonode->nome, destino); // copia o nome de destino (str) para o membro nome
     novonode->peso = peso;
@@ -91,11 +107,6 @@ graph* AdicionaConexao(graph* grafo, char* origem, char* destino, int peso) {
 
     return grafo;
 }
-// função que adiciona as estações dos dois lados da conexão
-//void AdicionaConexaoBidirecional(graph* grafo, const char* origem, const char* destino, int peso) {
-    //AdicionaConexao(grafo, origem, destino, peso);
-    //AdicionaConexao(grafo, destino, origem, peso); // Adiciona a conexão na direção oposta
-//}
 
 void abrirCSV(const char* arquivo, graph* grafo) {
     FILE* fp = fopen(arquivo, "r");
@@ -120,35 +131,62 @@ void abrirCSV(const char* arquivo, graph* grafo) {
     }
     fclose(fp);
 }
-
-int procuraMenorDistancia(float *dist, int *visitado, int NV) {
-
+// procura o menor vertice com a menor distancia até o momento e que não
+// tenha sido visitado
+int procuraMenorDistancia(int *dist, int *visitado, int NV) {
+    int menor = INF, menorIndice = -1;
+    for (int i = 0; i < NV; i++) {
+        if (!visitado[i] && dist[i] < menor) {
+            menor = dist[i];
+            menorIndice = i;
+        }
+    }
+    return menorIndice;
 }
+// ini é o vertice inicial
 // ant ordem que precisa ser visitada
 // dist distancia do veritice inicial até odestino
 // ambos com mesmo tamnaho de numero de vertices do grafo
-void MenorCaminhoGrafo(graph grafo*, int ini, int *ant, float *dist) {
-    int i, cont, NV, ind, *visitado, u;
-    cont = NV = grafo->estacoes;
-    visitado = (int*)malloc(NV * sizeof(int));
-    for (i = 0; i < NV; i++) {
-        // inicializando distancias anteriores
+void MenorCaminhoGrafo(graph* grafo, int ini, int* ant, int* dist) {
+    // NV numero de vertices
+    int NV = grafo->estacoes;
+    int visitados[MAX] = {0};
+
+    //inicializa distancias
+    for (int i = 0; i < NV; i++) {
+        dist[i] = INF;
         ant[i] = -1;
-        dist[i] = -1;
-        visitado[i] = 0;
     }
-    while(cont > 0) {
-        u = procuraMenorDistancia(dist, visitado, NV);
-        if (u == -1) {
-            break;
-            //...........
+    dist[ini] = 0;
+    for (int i = 0; i < NV - 1; i++) {
+        int u = procuraMenorDistancia(dist, visitados, NV);
+        if (u == -1) break;
+        visitados[u] = 1;
+        node* atual = grafo->adjacentes[u];
+        while (atual) {
+            int v = busca_adicionaestacao(atual->nome);
+            if (!visitados[v] && dist[u] != INF && dist[u] + atual->peso < dist[v]) {
+                dist[v] = dist[u] + atual->peso;
+                ant[v] = u;
+            }
+            atual = atual->proxima;
         }
     }
+}
+
+void imprimeCaminho(int* ant, int destino) {
+    if (ant[destino] == -1) {
+        printf("%s", estacoes[destino]);
+        return;
+    }
+    imprimeCaminho(ant, ant[destino]);
+    printf(" -> %s", estacoes[destino]);
 }
 
 int main () {
     graph* grafo = InitGraph(MAX);
     abrirCSV("C:/SpaceGraphs/estacoeserotas.csv", grafo);
+
     // itera por todas as estações
     for (int i=0; i<toralEstacoes; i++) {
         //cada indice i contem a lista encadeada de conexões para a estação i
@@ -160,6 +198,24 @@ int main () {
             atual = atual->proxima;
         }
     }
+    printf("Calculando rota da Terra até Centauri");
+
+    int ant[MAX];
+    int dist[MAX];
+
+    int origem = busca_adicionaestacao("Terra");
+    int destino = busca_adicionaestacao("Centauri");
+
+    if (origem == -1 || destino == -1) {
+        printf("Erro: Estações 'Terra' ou 'Centauri' não encontradas!\n");
+        free(grafo);
+        return 1;
+    }
+    MenorCaminhoGrafo(grafo, origem, ant, dist);
+    printf("Menor caminho da Terra ate Centauri é:\n");
+    imprimeCaminho(ant, destino);
+    printf("\nDistancia total: %d\n", dist[destino]);
+
     free(grafo);
     return 0;
 }
