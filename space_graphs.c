@@ -65,6 +65,7 @@ graph* InitGraph(int total_estacoes) {
     }
     return space_graph;
 }
+
 int rotaBloqueada(const char* origem, const char* destino) {
     const char* rotas_bloqueadas[][2] = {
         {"Elysium", "Idris"},
@@ -75,13 +76,30 @@ int rotaBloqueada(const char* origem, const char* destino) {
     for (int i = 0; i < 4; i++) {
         if ((strcmp(origem, rotas_bloqueadas[i][0]) == 0 && strcmp(destino, rotas_bloqueadas[i][1]) == 0) ||
             (strcmp(origem, rotas_bloqueadas[i][1]) == 0 && strcmp(destino, rotas_bloqueadas[i][0]) == 0)) {
+
             return 1; // Rota bloqueada
             }
     }
     return 0;
 }
 
-graph* AdicionaConexao(graph* grafo, char* origem, char* destino, int peso) {
+int Rotas_maisRapidasBloqueadas(const char* origem, const char* destino) {
+    const char* rotas_bloqueadas[][2] = {
+        {"Oya", "Castra"},
+        {"Vega", "Nul"},
+    };
+    for (int i = 0; i < 2; i++) {
+        if ((strcmp(origem, rotas_bloqueadas[i][0]) == 0 && strcmp(destino, rotas_bloqueadas[i][1]) == 0) ||
+            (strcmp(origem, rotas_bloqueadas[i][1]) == 0 && strcmp(destino, rotas_bloqueadas[i][0]) == 0)) {
+
+            return 1; // Rota bloqueada
+            }
+    }
+    return 0;
+}
+
+
+graph* AdicionaConexao(graph* grafo, char* origem, char* destino, int peso, int contigencia) {
     int indiceOrigem = busca_adicionaestacao(origem);
     int indiceDestino = busca_adicionaestacao(destino);
 
@@ -95,10 +113,21 @@ graph* AdicionaConexao(graph* grafo, char* origem, char* destino, int peso) {
         printf("Erro ao alocar memória\n");
         return grafo; // Retorna o grafo inalterado em caso de erro
     }
-    if (rotaBloqueada(origem, destino)) {
-        printf("Rota bloqueada: %s -> %s\n", origem, destino);
-        return grafo;
+    // função paara bloquear as primeiras rotas, as que ja estão bloqueadas inicialmente
+    if (contigencia == 0) {
+        if (rotaBloqueada(origem, destino)) {
+            printf("Rota bloqueada: %s -> %s\n", origem, destino);
+            return grafo; // retorna o grafo para a próxima iteração fazendo com que a rota seja bloqueada
+        }
     }
+    // função para bloquear rotas mais utilizadas
+    if (contigencia == 1) {
+        if (Rotas_maisRapidasBloqueadas(origem, destino)) {
+            printf("Rota bloqueada: %s -> %s\n", origem, destino);
+            return grafo; // retorna o grafo para a próxima iteração fazendo com que a rota seja bloqueada
+        }
+    }
+
     //Essa abordagem insere nós no início da lista, o que é eficiente (complexidade O(1))
     strcpy(novonode->nome, destino); // copia o nome de destino (str) para o membro nome
     novonode->peso = peso;
@@ -108,7 +137,7 @@ graph* AdicionaConexao(graph* grafo, char* origem, char* destino, int peso) {
     return grafo;
 }
 
-void abrirCSV(const char* arquivo, graph* grafo) {
+void abrirCSV(const char* arquivo, graph* grafo, int contingencia) {
     FILE* fp = fopen(arquivo, "r");
     if (!fp) {
         printf("Erro ao abrir o arquivo: %s\n", arquivo);
@@ -126,7 +155,7 @@ void abrirCSV(const char* arquivo, graph* grafo) {
 
         while ((destino = strtok(NULL, ",")) && (peso_str = strtok(NULL, ","))) {
             int peso = atoi(peso_str); // Converte o peso para inteiro
-            AdicionaConexao(grafo, origem, destino, peso);
+            AdicionaConexao(grafo, origem, destino, peso, contingencia);
         }
     }
     fclose(fp);
@@ -183,9 +212,34 @@ void imprimeCaminho(int* ant, int destino) {
     printf(" -> %s", estacoes[destino]);
 }
 
+void adicionaEstacao(graph* grafo, const char* novaEstacao) {
+    if (busca_adicionaestacao(novaEstacao) != -1) {
+        printf("Estação '%s' adicionada\n", novaEstacao);
+    } else {
+        printf("Erro p/ adicionar '%s'.\n", novaEstacao);
+    }
+}
+
+void adicionanewConexao(graph* grafo, const char* origem, const char* destino, int peso) {
+    AdicionaConexao(grafo, (char*)origem, (char*)destino, peso, 0);
+}
+
+void liberaGrafo(graph* grafo) {
+    for (int i = 0; i < grafo->estacoes; i++) {
+        node* atual = grafo->adjacentes[i];
+        while (atual) {
+            node* temp = atual;
+            atual = atual->proxima;
+            free(temp);
+        }
+    }
+    free(grafo);
+}
+
 int main () {
+    int sem_contingencia = 0;
     graph* grafo = InitGraph(MAX);
-    abrirCSV("C:/SpaceGraphs/estacoeserotas.csv", grafo);
+    abrirCSV("C:/SpaceGraphs/estacoeserotas.csv", grafo, sem_contingencia);
 
     // itera por todas as estações
     for (int i=0; i<toralEstacoes; i++) {
@@ -206,16 +260,46 @@ int main () {
     int origem = busca_adicionaestacao("Terra");
     int destino = busca_adicionaestacao("Centauri");
 
-    if (origem == -1 || destino == -1) {
-        printf("Erro: Estações 'Terra' ou 'Centauri' não encontradas!\n");
-        free(grafo);
-        return 1;
-    }
     MenorCaminhoGrafo(grafo, origem, ant, dist);
     printf("Menor caminho da Terra ate Centauri é:\n");
     imprimeCaminho(ant, destino);
     printf("\nDistancia total: %d\n", dist[destino]);
+    // free(grafo);
+    liberaGrafo(grafo);
+    printf("Calculando rotas de contingencia...\n");
+    graph* grafo_contingencia = InitGraph(MAX);
+    int com_contingencia = 1;
+    abrirCSV("C:/SpaceGraphs/estacoeserotas.csv", grafo_contingencia, com_contingencia);
+    printf("Calculando rota da Terra ate Centauri\n");
+    MenorCaminhoGrafo(grafo_contingencia, origem, ant, dist);
+    printf("Menor caminho da Terra ate Centauri usando uma contingencia caso rotas principais sejam bloqueadas e: \n");
+    imprimeCaminho(ant, destino);
+    printf("\nDistancia total percorrida: %d\n", dist[destino]);
+    liberaGrafo(grafo);
 
-    free(grafo);
+    printf("Calculando rotas de contingencia caso uma nova estação seja adicionanda ou excluida...\n");
+    graph* grafo_adicionando_estacoes = InitGraph(MAX);
+    abrirCSV("C:/SpaceGraphs/estacoeserotas.csv", grafo_adicionando_estacoes, sem_contingencia);
+    adicionaEstacao(grafo_adicionando_estacoes, "Raff");
+    adicionanewConexao(grafo_adicionando_estacoes, "Raff", "Pallas", 4);
+    for (int i=0; i<toralEstacoes; i++) {
+        //cada indice i contem a lista encadeada de conexões para a estação i
+        node* atual =  grafo_adicionando_estacoes->adjacentes[i];
+        printf("Estacao:%s\n", estacoes[i]);
+        while (atual != NULL) {
+            // percorre a lista de conexões da estação i
+            printf("  -> %s (peso: %d)\n", atual->nome, atual->peso);
+            atual = atual->proxima;
+        }
+    }
+    printf("Calculando rota da Terra ate Centauri\n");
+    MenorCaminhoGrafo(grafo_contingencia, origem, ant, dist);
+    printf("Menor caminho da Terra ate Centauri porem com 1 nova estacao adicionanda e: \n");
+    imprimeCaminho(ant, destino);
+    printf("\nDistancia total percorrida: %d\n", dist[destino]);
+
+    liberaGrafo(grafo);
+
+
     return 0;
 }
